@@ -18,38 +18,6 @@ const initialFormState = {
   interest: "Both",
 };
 
-function useIsMobileViewport() {
-  const getMatches = () =>
-    typeof window !== "undefined" && typeof window.matchMedia === "function"
-      ? window.matchMedia("(max-width: 760px)").matches
-      : false;
-
-  const [isMobileViewport, setIsMobileViewport] = useState(getMatches);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia("(max-width: 760px)");
-    const onChange = (event) => {
-      setIsMobileViewport(event.matches);
-    };
-
-    setIsMobileViewport(mediaQuery.matches);
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", onChange);
-      return () => mediaQuery.removeEventListener("change", onChange);
-    }
-
-    mediaQuery.addListener(onChange);
-    return () => mediaQuery.removeListener(onChange);
-  }, []);
-
-  return isMobileViewport;
-}
-
 function tryInlineAutoplay(videoElement, onPlaybackBlockedChange) {
   if (!videoElement) {
     return;
@@ -352,11 +320,10 @@ function HeroSection({
   nameInputRef,
   enquiryHighlighted,
 }) {
-  const isMobileViewport = useIsMobileViewport();
   const heroVideoRef = useRef(null);
   const [heroVideoAspectRatio, setHeroVideoAspectRatio] = useState(16 / 9);
   const [heroPlaybackBlocked, setHeroPlaybackBlocked] = useState(false);
-  const heroVideoSource = isMobileViewport ? "./entrance.mp4" : "./video.mp4";
+  const heroVideoSource = "./video.mp4";
 
   const handleHeroVideoMetadata = (event) => {
     const { videoWidth, videoHeight } = event.currentTarget;
@@ -382,7 +349,7 @@ function HeroSection({
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [heroVideoSource]);
+  }, []);
 
   return html`
     <section className="hero" id="home">
@@ -497,8 +464,7 @@ function HighlightStrip() {
 }
 
 function OverviewSection() {
-  const isMobileViewport = useIsMobileViewport();
-  const entranceVideo = isMobileViewport ? "./entrance2.mp4" : "./final.mp4";
+  const entranceVideo = "./final.mp4";
   const overviewVideoRef = useRef(null);
   const [overviewPlaybackBlocked, setOverviewPlaybackBlocked] = useState(false);
   const [entranceAspectRatio, setEntranceAspectRatio] = useState(16 / 9);
@@ -516,7 +482,7 @@ function OverviewSection() {
 
   useEffect(() => {
     handleOverviewPlayRequest();
-  }, [entranceVideo]);
+  }, []);
 
   return html`
     <section className="section section--overview" id="overview">
