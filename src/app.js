@@ -18,38 +18,6 @@ const initialFormState = {
   interest: "Both",
 };
 
-function useIsMobileViewport() {
-  const getMatches = () =>
-    typeof window !== "undefined" && typeof window.matchMedia === "function"
-      ? window.matchMedia("(max-width: 760px)").matches
-      : false;
-
-  const [isMobileViewport, setIsMobileViewport] = useState(getMatches);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
-      return undefined;
-    }
-
-    const mediaQuery = window.matchMedia("(max-width: 760px)");
-    const onChange = (event) => {
-      setIsMobileViewport(event.matches);
-    };
-
-    setIsMobileViewport(mediaQuery.matches);
-
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", onChange);
-      return () => mediaQuery.removeEventListener("change", onChange);
-    }
-
-    mediaQuery.addListener(onChange);
-    return () => mediaQuery.removeListener(onChange);
-  }, []);
-
-  return isMobileViewport;
-}
-
 function tryInlineAutoplay(videoElement, onPlaybackBlockedChange) {
   if (!videoElement) {
     return;
@@ -353,7 +321,6 @@ function HeroSection({
   nameInputRef,
   enquiryHighlighted,
 }) {
-  const isMobileViewport = useIsMobileViewport();
   const heroVideoRef = useRef(null);
   const [heroVideoAspectRatio, setHeroVideoAspectRatio] = useState(16 / 9);
   const [heroPlaybackBlocked, setHeroPlaybackBlocked] = useState(false);
@@ -372,6 +339,9 @@ function HeroSection({
 
   useEffect(() => {
     handleHeroPlayRequest();
+    const retryTimers = [500, 1400, 3000].map((delay) =>
+      window.setTimeout(handleHeroPlayRequest, delay),
+    );
 
     const onVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -379,9 +349,21 @@ function HeroSection({
       }
     };
 
+    const onUserGesture = () => {
+      handleHeroPlayRequest();
+    };
+
     document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("touchstart", onUserGesture);
+    window.addEventListener("click", onUserGesture);
+    window.addEventListener("pageshow", onUserGesture);
+
     return () => {
+      retryTimers.forEach((timerId) => window.clearTimeout(timerId));
       document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("touchstart", onUserGesture);
+      window.removeEventListener("click", onUserGesture);
+      window.removeEventListener("pageshow", onUserGesture);
     };
   }, []);
 
@@ -447,12 +429,10 @@ function HeroSection({
             defaultMuted
             loop
             playsInline
-            controls=${isMobileViewport}
-            preload=${isMobileViewport ? "metadata" : "auto"}
+            preload="metadata"
             poster="./apartment.png"
             onLoadedMetadata=${handleHeroVideoMetadata}
             onCanPlay=${handleHeroPlayRequest}
-            onClick=${handleHeroPlayRequest}
             onError=${() => setHeroPlaybackBlocked(true)}
             webkit-playsinline=""
           >
@@ -502,7 +482,6 @@ function HighlightStrip() {
 }
 
 function OverviewSection() {
-  const isMobileViewport = useIsMobileViewport();
   const entranceVideo = "./final.mp4";
   const overviewVideoRef = useRef(null);
   const [overviewPlaybackBlocked, setOverviewPlaybackBlocked] = useState(false);
@@ -521,6 +500,24 @@ function OverviewSection() {
 
   useEffect(() => {
     handleOverviewPlayRequest();
+    const retryTimers = [700, 1700, 3200].map((delay) =>
+      window.setTimeout(handleOverviewPlayRequest, delay),
+    );
+
+    const onUserGesture = () => {
+      handleOverviewPlayRequest();
+    };
+
+    window.addEventListener("touchstart", onUserGesture);
+    window.addEventListener("click", onUserGesture);
+    window.addEventListener("pageshow", onUserGesture);
+
+    return () => {
+      retryTimers.forEach((timerId) => window.clearTimeout(timerId));
+      window.removeEventListener("touchstart", onUserGesture);
+      window.removeEventListener("click", onUserGesture);
+      window.removeEventListener("pageshow", onUserGesture);
+    };
   }, []);
 
   return html`
@@ -543,12 +540,10 @@ function OverviewSection() {
               defaultMuted
               loop
               playsInline
-              controls=${isMobileViewport}
-              preload=${isMobileViewport ? "none" : "metadata"}
+              preload="metadata"
               poster="./entrance.png"
               onLoadedMetadata=${handleEntranceVideoMetadata}
               onCanPlay=${handleOverviewPlayRequest}
-              onClick=${handleOverviewPlayRequest}
               onError=${() => setOverviewPlaybackBlocked(true)}
               webkit-playsinline=""
             >
