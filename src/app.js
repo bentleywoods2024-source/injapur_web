@@ -976,17 +976,25 @@ export function App() {
   };
 
   const sendLeadToEndpoint = async (payload) => {
-    if (!project.inquiryEndpoint) {
+    if (!project.inquiryEndpoint || !project.inquiryFormName) {
       return false;
     }
 
     try {
+      const formPayload = new URLSearchParams();
+      formPayload.append("form-name", project.inquiryFormName);
+      formPayload.append("bot-field", "");
+
+      Object.entries(payload).forEach(([key, value]) => {
+        formPayload.append(key, value);
+      });
+
       const response = await fetch(project.inquiryEndpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: JSON.stringify(payload),
+        body: formPayload.toString(),
       });
 
       return response.ok;

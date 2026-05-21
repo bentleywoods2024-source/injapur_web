@@ -14,7 +14,9 @@ export const project = {
   mapsHref: "https://www.google.com/maps?q=17.3074529,78.5934553&z=17&hl=en",
   mapEmbedHref: "https://www.google.com/maps?q=17.3074529,78.5934553&z=17&hl=en&output=embed",
   rera: "RERA No. P02400010617",
-  inquiryEndpoint: "",
+  inquiryEndpoint: "/",
+  inquiryFormName: "project-enquiry",
+  inquiryEmail: "sales@chabbras-heaven-heights.com",
 };
 
 export const navItems = [
