@@ -258,7 +258,17 @@ function EnquiryCard({
         Share your details and our team will contact you with pricing, availability, and booking support.
       </p>
 
-      <form className="enquiry-form" onSubmit=${onSubmit} noValidate>
+      <form
+        className="enquiry-form"
+        name=${project.inquiryFormName}
+        method="POST"
+        data-netlify="true"
+        netlify-honeypot="bot-field"
+        onSubmit=${onSubmit}
+        noValidate
+      >
+        <input type="hidden" name="form-name" value=${project.inquiryFormName} />
+        <input type="hidden" name="bot-field" value="" />
         <label className="field">
           <span>Name</span>
           <input
