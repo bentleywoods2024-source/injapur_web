@@ -18,6 +18,38 @@ const initialFormState = {
   interest: "Both",
 };
 
+function useIsMobileViewport() {
+  const getMatches = () =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 760px)").matches
+      : false;
+
+  const [isMobileViewport, setIsMobileViewport] = useState(getMatches);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 760px)");
+    const onChange = (event) => {
+      setIsMobileViewport(event.matches);
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", onChange);
+      return () => mediaQuery.removeEventListener("change", onChange);
+    }
+
+    mediaQuery.addListener(onChange);
+    return () => mediaQuery.removeListener(onChange);
+  }, []);
+
+  return isMobileViewport;
+}
+
 function tryInlineAutoplay(videoElement, onPlaybackBlockedChange) {
   if (!videoElement) {
     return;
@@ -27,6 +59,7 @@ function tryInlineAutoplay(videoElement, onPlaybackBlockedChange) {
   videoElement.defaultMuted = true;
   videoElement.playsInline = true;
   videoElement.setAttribute("playsinline", "");
+  videoElement.setAttribute("webkit-playsinline", "");
 
   const playAttempt = videoElement.play();
   if (!playAttempt || typeof playAttempt.then !== "function") {
@@ -320,6 +353,7 @@ function HeroSection({
   nameInputRef,
   enquiryHighlighted,
 }) {
+  const isMobileViewport = useIsMobileViewport();
   const heroVideoRef = useRef(null);
   const [heroVideoAspectRatio, setHeroVideoAspectRatio] = useState(16 / 9);
   const [heroPlaybackBlocked, setHeroPlaybackBlocked] = useState(false);
@@ -413,10 +447,14 @@ function HeroSection({
             defaultMuted
             loop
             playsInline
-            preload="metadata"
+            controls=${isMobileViewport}
+            preload=${isMobileViewport ? "metadata" : "auto"}
             poster="./apartment.png"
             onLoadedMetadata=${handleHeroVideoMetadata}
             onCanPlay=${handleHeroPlayRequest}
+            onClick=${handleHeroPlayRequest}
+            onError=${() => setHeroPlaybackBlocked(true)}
+            webkit-playsinline=""
           >
             <source src=${heroVideoSource} type="video/mp4" />
           </video>
@@ -464,6 +502,7 @@ function HighlightStrip() {
 }
 
 function OverviewSection() {
+  const isMobileViewport = useIsMobileViewport();
   const entranceVideo = "./final.mp4";
   const overviewVideoRef = useRef(null);
   const [overviewPlaybackBlocked, setOverviewPlaybackBlocked] = useState(false);
@@ -504,10 +543,14 @@ function OverviewSection() {
               defaultMuted
               loop
               playsInline
-              preload="metadata"
+              controls=${isMobileViewport}
+              preload=${isMobileViewport ? "none" : "metadata"}
               poster="./entrance.png"
               onLoadedMetadata=${handleEntranceVideoMetadata}
               onCanPlay=${handleOverviewPlayRequest}
+              onClick=${handleOverviewPlayRequest}
+              onError=${() => setOverviewPlaybackBlocked(true)}
+              webkit-playsinline=""
             >
               <source src=${entranceVideo} type="video/mp4" />
             </video>
