@@ -18,6 +18,65 @@ const initialFormState = {
   interest: "Both",
 };
 
+function useIsMobileViewport() {
+  const getMatches = () =>
+    typeof window !== "undefined" && typeof window.matchMedia === "function"
+      ? window.matchMedia("(max-width: 760px)").matches
+      : false;
+
+  const [isMobileViewport, setIsMobileViewport] = useState(getMatches);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+      return undefined;
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 760px)");
+    const onChange = (event) => {
+      setIsMobileViewport(event.matches);
+    };
+
+    setIsMobileViewport(mediaQuery.matches);
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", onChange);
+      return () => mediaQuery.removeEventListener("change", onChange);
+    }
+
+    mediaQuery.addListener(onChange);
+    return () => mediaQuery.removeListener(onChange);
+  }, []);
+
+  return isMobileViewport;
+}
+
+function tryInlineAutoplay(videoElement, onPlaybackBlockedChange) {
+  if (!videoElement) {
+    return;
+  }
+
+  videoElement.muted = true;
+  videoElement.defaultMuted = true;
+  videoElement.playsInline = true;
+  videoElement.setAttribute("playsinline", "");
+
+  const playAttempt = videoElement.play();
+  if (!playAttempt || typeof playAttempt.then !== "function") {
+    onPlaybackBlockedChange(false);
+    return;
+  }
+
+  playAttempt
+    .then(() => {
+      onPlaybackBlockedChange(false);
+    })
+    .catch((error) => {
+      if (error?.name !== "AbortError") {
+        onPlaybackBlockedChange(true);
+      }
+    });
+}
+
 function createCleanLogoDataUrl(sourcePath) {
   return new Promise((resolve, reject) => {
     const image = new Image();
@@ -293,6 +352,38 @@ function HeroSection({
   nameInputRef,
   enquiryHighlighted,
 }) {
+  const isMobileViewport = useIsMobileViewport();
+  const heroVideoRef = useRef(null);
+  const [heroVideoAspectRatio, setHeroVideoAspectRatio] = useState(16 / 9);
+  const [heroPlaybackBlocked, setHeroPlaybackBlocked] = useState(false);
+  const heroVideoSource = isMobileViewport ? "./entrance.mp4" : "./video.mp4";
+
+  const handleHeroVideoMetadata = (event) => {
+    const { videoWidth, videoHeight } = event.currentTarget;
+    if (videoWidth > 0 && videoHeight > 0) {
+      setHeroVideoAspectRatio(videoWidth / videoHeight);
+    }
+  };
+
+  const handleHeroPlayRequest = () => {
+    tryInlineAutoplay(heroVideoRef.current, setHeroPlaybackBlocked);
+  };
+
+  useEffect(() => {
+    handleHeroPlayRequest();
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        handleHeroPlayRequest();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, [heroVideoSource]);
+
   return html`
     <section className="hero" id="home">
       <div className="section-shell">
@@ -344,11 +435,33 @@ function HeroSection({
           </div>
         </div>
 
-        <div className="hero__visual-frame card-frame">
+        <div className="hero__visual-frame card-frame" style=${{ "--hero-video-ratio": `${heroVideoAspectRatio}` }}>
           <span className="visual-tag">Project Visual</span>
-          <video className="hero__media" autoPlay muted loop playsInline poster="./apartment.png">
-            <source src="./video.mp4" type="video/mp4" />
+          <video
+            ref=${heroVideoRef}
+            key=${heroVideoSource}
+            className="hero__media"
+            autoPlay
+            muted
+            defaultMuted
+            loop
+            playsInline
+            preload="metadata"
+            poster="./apartment.png"
+            onLoadedMetadata=${handleHeroVideoMetadata}
+            onCanPlay=${handleHeroPlayRequest}
+          >
+            <source src=${heroVideoSource} type="video/mp4" />
           </video>
+
+          ${heroPlaybackBlocked
+            ? html`
+                <button className="video-play-fallback" type="button" onClick=${handleHeroPlayRequest}>
+                  Tap To Play Video
+                </button>
+              `
+            : null}
+
           <div className="hero__veil"></div>
 
           <div className="hero__visual-copy">
@@ -384,7 +497,10 @@ function HighlightStrip() {
 }
 
 function OverviewSection() {
-  const entranceVideo = "./final.mp4";
+  const isMobileViewport = useIsMobileViewport();
+  const entranceVideo = isMobileViewport ? "./entrance2.mp4" : "./final.mp4";
+  const overviewVideoRef = useRef(null);
+  const [overviewPlaybackBlocked, setOverviewPlaybackBlocked] = useState(false);
   const [entranceAspectRatio, setEntranceAspectRatio] = useState(16 / 9);
 
   const handleEntranceVideoMetadata = (event) => {
@@ -393,6 +509,14 @@ function OverviewSection() {
       setEntranceAspectRatio(videoWidth / videoHeight);
     }
   };
+
+  const handleOverviewPlayRequest = () => {
+    tryInlineAutoplay(overviewVideoRef.current, setOverviewPlaybackBlocked);
+  };
+
+  useEffect(() => {
+    handleOverviewPlayRequest();
+  }, [entranceVideo]);
 
   return html`
     <section className="section section--overview" id="overview">
@@ -406,18 +530,29 @@ function OverviewSection() {
         <div className="overview-layout">
           <div className="overview-showcase card-frame" style=${{ "--overview-video-ratio": `${entranceAspectRatio}` }}>
             <video
+              ref=${overviewVideoRef}
               key=${entranceVideo}
               className="overview-showcase__image"
               autoPlay
               muted
+              defaultMuted
               loop
               playsInline
               preload="metadata"
               poster="./entrance.png"
               onLoadedMetadata=${handleEntranceVideoMetadata}
+              onCanPlay=${handleOverviewPlayRequest}
             >
               <source src=${entranceVideo} type="video/mp4" />
             </video>
+
+            ${overviewPlaybackBlocked
+              ? html`
+                  <button className="video-play-fallback video-play-fallback--overview" type="button" onClick=${handleOverviewPlayRequest}>
+                    Tap To Play Video
+                  </button>
+                `
+              : null}
           </div>
 
           <div className="stats-grid">
